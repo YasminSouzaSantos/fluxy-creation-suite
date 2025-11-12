@@ -3,83 +3,77 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
-import { Globe, Search, Sparkles } from "lucide-react";
+import { Globe, Search, Eye, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { siteTemplates } from "@/data/siteTemplates";
+import SitePreview from "@/components/templates/SitePreview";
+import VisualEditor from "@/components/editor/VisualEditor";
 
 const SiteBuilder = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [siteName, setSiteName] = useState("");
-  const [siteDescription, setSiteDescription] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState<any>(null);
   const [creating, setCreating] = useState(false);
 
-  const categories = [
-    "todos", "loja virtual", "cardápio digital", "portfólio", "salão de beleza",
-    "academia", "pet shop", "restaurante", "oficina", "eventos", "fotógrafo",
-    "clínica", "escola", "advocacia", "consultoria", "imobiliária"
-  ];
+  const categories = ["todos", ...new Set(siteTemplates.map((t) => t.category))];
 
-  const templates = [
-    { id: "1", name: "Loja Moderna", category: "loja virtual", preview: "🛍️" },
-    { id: "2", name: "Cardápio Elegante", category: "cardápio digital", preview: "🍽️" },
-    { id: "3", name: "Portfólio Criativo", category: "portfólio", preview: "🎨" },
-    { id: "4", name: "Salão Premium", category: "salão de beleza", preview: "💇" },
-    { id: "5", name: "Fitness Pro", category: "academia", preview: "💪" },
-    { id: "6", name: "Pet Care", category: "pet shop", preview: "🐾" },
-    { id: "7", name: "Restaurante Gourmet", category: "restaurante", preview: "🍴" },
-    { id: "8", name: "Auto Center", category: "oficina", preview: "🔧" },
-    { id: "9", name: "Eventos Especiais", category: "eventos", preview: "🎉" },
-    { id: "10", name: "Foto Studio", category: "fotógrafo", preview: "📸" },
-    { id: "11", name: "Clínica Saúde", category: "clínica", preview: "🏥" },
-    { id: "12", name: "Escola Digital", category: "escola", preview: "📚" },
-    { id: "13", name: "Advocacia Pro", category: "advocacia", preview: "⚖️" },
-    { id: "14", name: "Consultoria Expert", category: "consultoria", preview: "💼" },
-    { id: "15", name: "Imóveis Prime", category: "imobiliária", preview: "🏠" },
-  ];
-
-  const filteredTemplates = templates.filter((template) => {
-    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.category.includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "todos" || template.category === selectedCategory;
+  const filteredTemplates = siteTemplates.filter((template) => {
+    const matchesSearch =
+      template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.category.includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "todos" || template.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleCreateSite = async () => {
-    if (!selectedTemplate || !siteName) {
-      toast.error("Preencha todos os campos obrigatórios");
-      return;
-    }
+  const handleCreateSite = async (content: any) => {
+    if (!selectedTemplate) return;
 
     setCreating(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const template = templates.find((t) => t.id === selectedTemplate);
+    const template = siteTemplates.find((t) => t.id === selectedTemplate);
     const { error } = await supabase.from("sites").insert({
       user_id: user.id,
-      name: siteName,
-      description: siteDescription,
+      name: template?.name || "Novo Site",
+      description: template?.category || "",
       template_id: selectedTemplate,
       category: template?.category || "",
-      url_slug: siteName.toLowerCase().replace(/\s+/g, "-"),
+      url_slug: template?.name.toLowerCase().replace(/\s+/g, "-") || "site",
+      content: content,
     });
 
     if (error) {
       toast.error("Erro ao criar site");
       console.error(error);
     } else {
-      toast.success("Site criado com sucesso!");
+      toast.success("Site criado e publicado com sucesso!");
       navigate("/dashboard/sites");
     }
     setCreating(false);
   };
+
+  const currentTemplate = siteTemplates.find((t) => t.id === selectedTemplate);
+  const previewTemplateData = siteTemplates.find((t) => t.id === previewTemplate);
+
+  if (isEditing && currentTemplate) {
+    return (
+      <VisualEditor
+        templateContent={editedContent || currentTemplate.content}
+        onSave={handleCreateSite}
+        onPreview={() => setIsEditing(false)}
+      />
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -87,7 +81,7 @@ const SiteBuilder = () => {
         <div>
           <h1 className="text-4xl font-bold mb-2">Gerador de Sites</h1>
           <p className="text-muted-foreground">
-            Escolha um template e personalize seu site em minutos
+            Escolha um template profissional e personalize visualmente
           </p>
         </div>
 
@@ -120,25 +114,51 @@ const SiteBuilder = () => {
             </div>
 
             {/* Templates Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredTemplates.map((template) => (
                 <Card
                   key={template.id}
-                  className="cursor-pointer hover:shadow-lg transition-all hover:scale-105"
-                  onClick={() => setSelectedTemplate(template.id)}
+                  className="group hover:shadow-xl transition-all overflow-hidden"
                 >
-                  <CardHeader>
-                    <div className="w-full h-32 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
-                      <span className="text-6xl">{template.preview}</span>
+                  <CardHeader className="p-0">
+                    <div className="relative w-full h-48 overflow-hidden">
+                      <img
+                        src={template.thumbnail}
+                        alt={template.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <CardTitle className="text-white text-xl mb-1">
+                          {template.name}
+                        </CardTitle>
+                        <CardDescription className="text-white/80 capitalize">
+                          {template.category}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
-                    <CardDescription className="capitalize">
-                      {template.category}
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      Usar Template
+                  <CardContent className="p-4 space-y-2">
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedTemplate(template.id);
+                        setIsEditing(true);
+                      }}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Editar Template
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewTemplate(template.id);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview
                     </Button>
                   </CardContent>
                 </Card>
@@ -157,62 +177,16 @@ const SiteBuilder = () => {
               </Card>
             )}
           </>
-        ) : (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle>Configure seu Site</CardTitle>
-                  <CardDescription>
-                    Personalize as informações do seu novo site
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="site-name">Nome do Site *</Label>
-                <Input
-                  id="site-name"
-                  placeholder="Ex: Minha Loja Online"
-                  value={siteName}
-                  onChange={(e) => setSiteName(e.target.value)}
-                />
-              </div>
+        ) : null}
 
-              <div className="space-y-2">
-                <Label htmlFor="site-description">Descrição</Label>
-                <Textarea
-                  id="site-description"
-                  placeholder="Descreva seu site..."
-                  value={siteDescription}
-                  onChange={(e) => setSiteDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex space-x-4">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setSelectedTemplate(null)}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={handleCreateSite}
-                  disabled={creating}
-                >
-                  {creating ? "Criando..." : "Criar Site"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Preview Dialog */}
+        <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
+          <DialogContent className="max-w-6xl h-[90vh] p-0">
+            {previewTemplateData && (
+              <SitePreview template={previewTemplateData} />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
