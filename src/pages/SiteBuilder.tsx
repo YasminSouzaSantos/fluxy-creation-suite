@@ -42,13 +42,21 @@ const SiteBuilder = () => {
     if (!user) return;
 
     const template = siteTemplates.find((t) => t.id === selectedTemplate);
+    const slugBase = (template?.name || "site")
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    const rand = Math.random().toString(36).slice(2, 6);
+    const url_slug = `${slugBase}-${rand}`;
+
     const { error } = await supabase.from("sites").insert({
       user_id: user.id,
       name: template?.name || "Novo Site",
       description: template?.category || "",
       template_id: selectedTemplate,
       category: template?.category || "",
-      url_slug: template?.name.toLowerCase().replace(/\s+/g, "-") || "site",
+      url_slug,
+      is_published: true,
       content: content,
     });
 
@@ -56,8 +64,10 @@ const SiteBuilder = () => {
       toast.error("Erro ao criar site");
       console.error(error);
     } else {
-      toast.success("Site criado e publicado com sucesso!");
+      const publicUrl = `${window.location.origin}/s/${url_slug}`;
+      toast.success(`Site publicado! ${publicUrl}`);
       navigate("/dashboard/sites");
+      window.open(publicUrl, "_blank");
     }
     setCreating(false);
   };

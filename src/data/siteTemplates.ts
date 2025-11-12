@@ -24,6 +24,7 @@ export interface SiteTemplate {
       email: string;
       address: string;
     };
+    elements?: any[];
     colors: {
       primary: string;
       secondary: string;
@@ -216,4 +217,66 @@ export const siteTemplates: SiteTemplate[] = [
       },
     },
   },
+  {
+    id: "linkinbio-elegante",
+    name: "Link-in-bio Elegante",
+    category: "link-in-bio",
+    thumbnail: "https://images.unsplash.com/photo-1518837695005-2083093ee35b",
+    content: {
+      hero: { title: "Link-in-bio", subtitle: "Modelo editável", buttonText: "Acessar" },
+      elements: [
+        {
+          id: "avatar-1",
+          type: "image",
+          content: "https://images.unsplash.com/photo-1502685104226-ee32379fefbe",
+          styles: { width: "120px", height: "120px", borderRadius: "9999px" },
+          position: { x: 360, y: 60 }
+        },
+        {
+          id: "name-1",
+          type: "text",
+          content: "Seu Nome",
+          styles: { fontSize: "28px", color: "#111827" },
+          position: { x: 320, y: 200 }
+        },
+        {
+          id: "bio-1",
+          type: "text",
+          content: "Crie seus melhores links com estilo",
+          styles: { fontSize: "14px", color: "#6B7280" },
+          position: { x: 280, y: 240 }
+        },
+        {
+          id: "btn-1",
+          type: "button",
+          content: "Instagram",
+          link: "https://instagram.com/",
+          styles: { backgroundColor: "#3B82F6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          position: { x: 280, y: 300 }
+        },
+        {
+          id: "btn-2",
+          type: "button",
+          content: "WhatsApp",
+          link: "https://wa.me/",
+          styles: { backgroundColor: "#10B981", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          position: { x: 280, y: 360 }
+        },
+        {
+          id: "btn-3",
+          type: "button",
+          content: "Portfólio",
+          link: "#",
+          styles: { backgroundColor: "#8B5CF6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          position: { x: 280, y: 420 }
+        }
+      ],
+      colors: {
+        primary: "#3B82F6",
+        secondary: "#8B5CF6",
+        text: "#1F2937",
+        background: "#FFFFFF",
+      },
+    },
+  }
 ];

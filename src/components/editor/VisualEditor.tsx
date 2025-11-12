@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +19,14 @@ interface Element {
     padding?: string;
     margin?: string;
     borderRadius?: string;
+    width?: string;
+    height?: string;
   };
   position: {
     x: number;
     y: number;
   };
+  link?: string;
 }
 
 interface VisualEditorProps {
@@ -37,6 +40,39 @@ const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps)
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [history, setHistory] = useState<Element[][]>([elements]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({x:0,y:0});
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, element: Element) => {
+    if ((e.target as HTMLElement).isContentEditable) return;
+    setSelectedElement(element.id);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setDraggingId(element.id);
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!draggingId) return;
+      setElements((prev) => prev.map((el) =>
+        el.id === draggingId
+          ? { ...el, position: { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y } }
+          : el
+      ));
+    };
+    const onUp = () => {
+      if (draggingId) {
+        addToHistory(elements);
+      }
+      setDraggingId(null);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [draggingId, dragOffset, elements]);
 
   const addToHistory = (newElements: Element[]) => {
     const newHistory = history.slice(0, historyIndex + 1);
@@ -122,11 +158,67 @@ const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps)
               <Type className="w-4 h-4 mr-2" />
               Adicionar Texto
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                const url = prompt("URL da imagem");
+                if (!url) return;
+                const newEl: Element = {
+                  id: `img-${Date.now()}`,
+                  type: "image",
+                  content: url,
+                  styles: { width: "120px", height: "120px", borderRadius: "8px" },
+                  position: { x: 80, y: 80 },
+                };
+                const newElements = [...elements, newEl];
+                setElements(newElements);
+                addToHistory(newElements);
+              }}
+            >
               <ImageIcon className="w-4 h-4 mr-2" />
               Adicionar Imagem
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                const newEl: Element = {
+                  id: `btn-${Date.now()}`,
+                  type: "button",
+                  content: "Novo Botão",
+                  styles: {
+                    backgroundColor: "hsl(var(--primary))",
+                    color: "hsl(var(--primary-foreground))",
+                    padding: "12px 24px",
+                    borderRadius: "12px",
+                  },
+                  position: { x: 120, y: 120 },
+                };
+                const newElements = [...elements, newEl];
+                setElements(newElements);
+                addToHistory(newElements);
+              }}
+            >
+              <Square className="w-4 h-4 mr-2" />
+              Adicionar Botão
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => {
+                const newEl: Element = {
+                  id: `section-${Date.now()}`,
+                  type: "section",
+                  content: "",
+                  styles: { backgroundColor: "hsl(var(--muted))", width: "320px", height: "120px", borderRadius: "16px" },
+                  position: { x: 40, y: 200 },
+                };
+                const newElements = [...elements, newEl];
+                setElements(newElements);
+                addToHistory(newElements);
+              }}
+            >
               <Square className="w-4 h-4 mr-2" />
               Adicionar Seção
             </Button>
@@ -190,6 +282,58 @@ const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps)
                       }
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Largura (px)</Label>
+                      <Input
+                        type="number"
+                        value={parseInt(selectedEl.styles.width || "0") || 0}
+                        onChange={(e) =>
+                          updateElement(selectedEl.id, {
+                            styles: { ...selectedEl.styles, width: `${e.target.value}px` },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Altura (px)</Label>
+                      <Input
+                        type="number"
+                        value={parseInt(selectedEl.styles.height || "0") || 0}
+                        onChange={(e) =>
+                          updateElement(selectedEl.id, {
+                            styles: { ...selectedEl.styles, height: `${e.target.value}px` },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  {selectedEl.type === "button" && (
+                    <div className="space-y-2">
+                      <Label>Link (URL)</Label>
+                      <Input
+                        type="url"
+                        value={selectedEl.link || ""}
+                        onChange={(e) =>
+                          updateElement(selectedEl.id, { link: e.target.value })
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                  )}
+                  {selectedEl.type === "image" && (
+                    <div className="space-y-2">
+                      <Label>URL da Imagem</Label>
+                      <Input
+                        type="url"
+                        value={selectedEl.content}
+                        onChange={(e) =>
+                          updateElement(selectedEl.id, { content: e.target.value })
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>
@@ -211,12 +355,28 @@ const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps)
                   ...element.styles,
                 }}
                 onClick={() => setSelectedElement(element.id)}
+                onMouseDown={(e) => handleMouseDown(e, element)}
               >
                 {element.type === "text" && (
                   <div contentEditable suppressContentEditableWarning>
                     {element.content}
                   </div>
                 )}
+                {element.type === "button" && (
+                  <a
+                    href={element.link || "#"}
+                    target={element.link ? "_blank" : undefined}
+                    rel={element.link ? "noopener noreferrer" : undefined}
+                    className="inline-block"
+                  >
+                    {element.content}
+                  </a>
+                )}
+                {element.type === "image" && (
+                  <img src={element.content} alt="" className="block" />
+                )}
+                {element.type === "section" && <div className="w-full h-full" />}
+
               </div>
             ))}
           </div>

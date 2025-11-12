@@ -14,6 +14,7 @@ import Automation from "./pages/Automation";
 import Billing from "./pages/Billing";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import PublicSite from "./pages/PublicSite";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/dashboard/automation" element={<Automation />} />
           <Route path="/dashboard/billing" element={<Billing />} />
           <Route path="/dashboard/admin" element={<Admin />} />
+          <Route path="/s/:slug" element={<PublicSite />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
