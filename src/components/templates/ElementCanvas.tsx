@@ -13,6 +13,8 @@ export type ElementItem = {
     borderRadius?: string;
     width?: string;
     height?: string;
+    fontWeight?: string;
+    textAlign?: string;
   };
   position: {
     x: number;

@@ -36,6 +36,96 @@ export interface SiteTemplate {
 
 export const siteTemplates: SiteTemplate[] = [
   {
+    id: "restaurante-noodles",
+    name: "Restaurante Moderno",
+    category: "restaurante",
+    thumbnail: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1",
+    content: {
+      hero: { title: "Stretch Noodles", subtitle: "Delícia asiática", buttonText: "Ver Cardápio" },
+      elements: [
+        {
+          id: "bg-section",
+          type: "section",
+          content: "",
+          styles: { backgroundColor: "#1a1a1a", width: "100%", height: "800px" },
+          position: { x: 0, y: 0 }
+        },
+        {
+          id: "logo",
+          type: "text",
+          content: "STRETCH═NOODLES",
+          styles: { fontSize: "18px", color: "#ffffff", fontWeight: "600", textAlign: "center" },
+          position: { x: 480, y: 40 }
+        },
+        {
+          id: "hero-title",
+          type: "text",
+          content: "STRETCH YOUR CRAVE",
+          styles: { fontSize: "80px", color: "#D4FF00", fontWeight: "900", textAlign: "center", width: "900px" },
+          position: { x: 200, y: 140 }
+        },
+        {
+          id: "img-left",
+          type: "image",
+          content: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624",
+          styles: { width: "480px", height: "320px", borderRadius: "20px" },
+          position: { x: 120, y: 280 }
+        },
+        {
+          id: "img-right",
+          type: "image",
+          content: "https://images.unsplash.com/photo-1612929633738-8fe44f7ec841",
+          styles: { width: "480px", height: "320px", borderRadius: "20px" },
+          position: { x: 640, y: 280 }
+        },
+        {
+          id: "section-title",
+          type: "text",
+          content: "Savor the Flavors",
+          styles: { fontSize: "32px", color: "#000000", fontWeight: "700" },
+          position: { x: 640, y: 640 }
+        },
+        {
+          id: "section-desc",
+          type: "text",
+          content: "Discover our fresh, handcrafted noodles, made to satisfy every craving.",
+          styles: { fontSize: "16px", color: "#666666", width: "420px" },
+          position: { x: 640, y: 690 }
+        },
+        {
+          id: "btn-menu",
+          type: "button",
+          content: "View Our Menu →",
+          link: "#",
+          styles: { backgroundColor: "#ffffff", color: "#000000", padding: "14px 28px", borderRadius: "12px", fontSize: "16px", fontWeight: "500" },
+          position: { x: 120, y: 640 }
+        },
+        {
+          id: "btn-order",
+          type: "button",
+          content: "Order Now →",
+          link: "#",
+          styles: { backgroundColor: "#000000", color: "#ffffff", padding: "14px 28px", borderRadius: "12px", fontSize: "16px", fontWeight: "500" },
+          position: { x: 300, y: 640 }
+        },
+        {
+          id: "btn-specials",
+          type: "button",
+          content: "View specials →",
+          link: "#",
+          styles: { backgroundColor: "#000000", color: "#ffffff", padding: "14px 28px", borderRadius: "12px", fontSize: "16px", fontWeight: "500" },
+          position: { x: 640, y: 750 }
+        }
+      ],
+      colors: {
+        primary: "#D4FF00",
+        secondary: "#1a1a1a",
+        text: "#ffffff",
+        background: "#000000",
+      },
+    },
+  },
+  {
     id: "loja-moderna",
     name: "Loja Moderna",
     category: "loja virtual",
@@ -236,14 +326,14 @@ export const siteTemplates: SiteTemplate[] = [
           id: "name-1",
           type: "text",
           content: "Seu Nome",
-          styles: { fontSize: "28px", color: "#111827" },
+          styles: { fontSize: "28px", color: "#111827", fontWeight: "700", textAlign: "center" },
           position: { x: 320, y: 200 }
         },
         {
           id: "bio-1",
           type: "text",
           content: "Crie seus melhores links com estilo",
-          styles: { fontSize: "14px", color: "#6B7280" },
+          styles: { fontSize: "14px", color: "#6B7280", textAlign: "center" },
           position: { x: 280, y: 240 }
         },
         {
@@ -251,7 +341,7 @@ export const siteTemplates: SiteTemplate[] = [
           type: "button",
           content: "Instagram",
           link: "https://instagram.com/",
-          styles: { backgroundColor: "#3B82F6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          styles: { backgroundColor: "#3B82F6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px", width: "300px", fontWeight: "500", textAlign: "center" },
           position: { x: 280, y: 300 }
         },
         {
@@ -259,7 +349,7 @@ export const siteTemplates: SiteTemplate[] = [
           type: "button",
           content: "WhatsApp",
           link: "https://wa.me/",
-          styles: { backgroundColor: "#10B981", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          styles: { backgroundColor: "#10B981", color: "#ffffff", padding: "12px 24px", borderRadius: "12px", width: "300px", fontWeight: "500", textAlign: "center" },
           position: { x: 280, y: 360 }
         },
         {
@@ -267,7 +357,7 @@ export const siteTemplates: SiteTemplate[] = [
           type: "button",
           content: "Portfólio",
           link: "#",
-          styles: { backgroundColor: "#8B5CF6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px" },
+          styles: { backgroundColor: "#8B5CF6", color: "#ffffff", padding: "12px 24px", borderRadius: "12px", width: "300px", fontWeight: "500", textAlign: "center" },
           position: { x: 280, y: 420 }
         }
       ],

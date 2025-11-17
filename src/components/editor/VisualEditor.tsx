@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Eye, Undo, Redo, Type, Image as ImageIcon, Square, Palette } from "lucide-react";
 import { toast } from "sonner";
+import { Save, Eye, Undo, Redo, Plus, Image as ImageIcon, Type, Square, Layers, MousePointer, Trash2, Home } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface Element {
+type Element = {
   id: string;
   type: "text" | "image" | "button" | "section";
   content: string;
@@ -21,13 +21,15 @@ interface Element {
     borderRadius?: string;
     width?: string;
     height?: string;
+    fontWeight?: string;
+    textAlign?: string;
   };
   position: {
     x: number;
     y: number;
   };
   link?: string;
-}
+};
 
 interface VisualEditorProps {
   templateContent: any;
@@ -35,50 +37,50 @@ interface VisualEditorProps {
   onPreview: () => void;
 }
 
-const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps) => {
+const VisualEditor: React.FC<VisualEditorProps> = ({ templateContent, onSave, onPreview }) => {
   const [elements, setElements] = useState<Element[]>(templateContent?.elements || []);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [history, setHistory] = useState<Element[][]>([elements]);
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({x:0,y:0});
+  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, element: Element) => {
-    if ((e.target as HTMLElement).isContentEditable) return;
-    setSelectedElement(element.id);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    setDraggingId(element.id);
-  };
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!draggingId) return;
-      setElements((prev) => prev.map((el) =>
-        el.id === draggingId
-          ? { ...el, position: { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y } }
-          : el
-      ));
-    };
-    const onUp = () => {
-      if (draggingId) {
-        addToHistory(elements);
-      }
-      setDraggingId(null);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [draggingId, dragOffset, elements]);
-
-  const addToHistory = (newElements: Element[]) => {
+  const updateElements = (newElements: Element[]) => {
+    setElements(newElements);
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newElements);
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
+  };
+
+  const handleAddElement = (type: Element["type"]) => {
+    const newElement: Element = {
+      id: `el-${Date.now()}`,
+      type,
+      content: type === "text" ? "Novo Texto" : type === "button" ? "Clique Aqui" : type === "image" ? "https://images.unsplash.com/photo-1649972904349-6e44c42644a7" : "",
+      styles: {
+        color: type === "button" ? "#ffffff" : "#000000",
+        backgroundColor: type === "button" ? "#3B82F6" : type === "section" ? "#f3f4f6" : "transparent",
+        fontSize: type === "text" ? "16px" : "14px",
+        padding: type === "button" ? "12px 24px" : type === "section" ? "40px" : "0px",
+        borderRadius: type === "button" ? "8px" : type === "section" ? "12px" : "0px",
+        width: type === "image" ? "200px" : type === "section" ? "400px" : "auto",
+        height: type === "image" ? "200px" : type === "section" ? "300px" : "auto",
+        fontWeight: "400",
+        textAlign: "left",
+      },
+      position: { x: 100, y: 100 + elements.length * 20 },
+      link: type === "button" ? "#" : undefined,
+    };
+    updateElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+    toast.success(`Elemento ${type} adicionado`);
+  };
+
+  const handleDeleteElement = (id: string) => {
+    updateElements(elements.filter(el => el.id !== id));
+    setSelectedElement(null);
+    toast.success("Elemento removido");
   };
 
   const handleUndo = () => {
@@ -95,293 +97,431 @@ const VisualEditor = ({ templateContent, onSave, onPreview }: VisualEditorProps)
     }
   };
 
-  const updateElement = (id: string, updates: Partial<Element>) => {
-    const newElements = elements.map((el) =>
-      el.id === id ? { ...el, ...updates } : el
+  const handleSelectElement = (id: string) => {
+    setSelectedElement(id);
+  };
+
+  const handleUpdateElement = (id: string, field: keyof Element, value: any) => {
+    const updated = elements.map((el) =>
+      el.id === id ? { ...el, [field]: value } : el
     );
-    setElements(newElements);
-    addToHistory(newElements);
+    updateElements(updated);
   };
 
-  const handleSave = () => {
-    onSave({ elements });
-    toast.success("Site salvo com sucesso!");
+  const handleUpdateStyle = (id: string, styleKey: string, value: string) => {
+    const updated = elements.map((el) =>
+      el.id === id ? { ...el, styles: { ...el.styles, [styleKey]: value } } : el
+    );
+    updateElements(updated);
   };
 
-  const selectedEl = elements.find((el) => el.id === selectedElement);
+  const handleMouseDown = (e: React.MouseEvent, id: string) => {
+    const element = elements.find((el) => el.id === id);
+    if (!element) return;
+    
+    const offsetX = e.clientX - element.position.x;
+    const offsetY = e.clientY - element.position.y;
+    setDragging({ id, offsetX, offsetY });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragging) return;
+
+      const updated = elements.map((el) =>
+        el.id === dragging.id
+          ? { ...el, position: { x: e.clientX - dragging.offsetX, y: e.clientY - dragging.offsetY } }
+          : el
+      );
+      setElements(updated);
+    };
+
+    const handleMouseUp = () => {
+      if (dragging) {
+        updateElements(elements);
+      }
+      setDragging(null);
+    };
+
+    if (dragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragging, elements]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({ elements });
+    setSaving(false);
+  };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Toolbar */}
-      <div className="border-b bg-card p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleUndo} disabled={historyIndex === 0}>
-            <Undo className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleRedo} disabled={historyIndex === history.length - 1}>
-            <Redo className="w-4 h-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={onPreview}>
-            <Eye className="w-4 h-4 mr-2" />
-            Preview
-          </Button>
-          <Button onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" />
-            Salvar
-          </Button>
-        </div>
+    <div className="min-h-screen bg-muted/30 flex">
+      {/* Left Sidebar - Tools */}
+      <div className="w-20 bg-card border-r flex flex-col items-center py-4 gap-4">
+        <Button
+          variant={selectedElement ? "ghost" : "default"}
+          size="icon"
+          onClick={() => setSelectedElement(null)}
+          className="w-12 h-12"
+        >
+          <MousePointer className="w-5 h-5" />
+        </Button>
+        
+        <Separator />
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleAddElement("text")}
+          className="w-12 h-12"
+          title="Adicionar Texto"
+        >
+          <Type className="w-5 h-5" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleAddElement("image")}
+          className="w-12 h-12"
+          title="Adicionar Imagem"
+        >
+          <ImageIcon className="w-5 h-5" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleAddElement("button")}
+          className="w-12 h-12"
+          title="Adicionar Botão"
+        >
+          <Square className="w-5 h-5" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleAddElement("section")}
+          className="w-12 h-12"
+          title="Adicionar Seção"
+        >
+          <Layers className="w-5 h-5" />
+        </Button>
+
+        <div className="flex-1" />
+
+        <Separator />
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onPreview()}
+          className="w-12 h-12"
+        >
+          <Home className="w-5 h-5" />
+        </Button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Tools */}
-        <div className="w-64 border-r bg-card p-4 overflow-y-auto">
-          <h3 className="font-semibold mb-4">Elementos</h3>
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                const newEl: Element = {
-                  id: `text-${Date.now()}`,
-                  type: "text",
-                  content: "Texto aqui",
-                  styles: { fontSize: "16px", color: "hsl(var(--foreground))" },
-                  position: { x: 50, y: 50 },
-                };
-                const newElements = [...elements, newEl];
-                setElements(newElements);
-                addToHistory(newElements);
-              }}
-            >
-              <Type className="w-4 h-4 mr-2" />
-              Adicionar Texto
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Toolbar */}
+        <div className="bg-card border-b p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleUndo} disabled={historyIndex <= 0}>
+              <Undo className="w-4 h-4" />
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                const url = prompt("URL da imagem");
-                if (!url) return;
-                const newEl: Element = {
-                  id: `img-${Date.now()}`,
-                  type: "image",
-                  content: url,
-                  styles: { width: "120px", height: "120px", borderRadius: "8px" },
-                  position: { x: 80, y: 80 },
-                };
-                const newElements = [...elements, newEl];
-                setElements(newElements);
-                addToHistory(newElements);
-              }}
-            >
-              <ImageIcon className="w-4 h-4 mr-2" />
-              Adicionar Imagem
+            <Button variant="outline" size="sm" onClick={handleRedo} disabled={historyIndex >= history.length - 1}>
+              <Redo className="w-4 h-4" />
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                const newEl: Element = {
-                  id: `btn-${Date.now()}`,
-                  type: "button",
-                  content: "Novo Botão",
-                  styles: {
-                    backgroundColor: "hsl(var(--primary))",
-                    color: "hsl(var(--primary-foreground))",
-                    padding: "12px 24px",
-                    borderRadius: "12px",
-                  },
-                  position: { x: 120, y: 120 },
-                };
-                const newElements = [...elements, newEl];
-                setElements(newElements);
-                addToHistory(newElements);
-              }}
-            >
-              <Square className="w-4 h-4 mr-2" />
-              Adicionar Botão
+            
+            <Separator orientation="vertical" className="h-6 mx-2" />
+            
+            <span className="text-sm text-muted-foreground">
+              {elements.length} elemento(s)
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onPreview()}>
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                const newEl: Element = {
-                  id: `section-${Date.now()}`,
-                  type: "section",
-                  content: "",
-                  styles: { backgroundColor: "hsl(var(--muted))", width: "320px", height: "120px", borderRadius: "16px" },
-                  position: { x: 40, y: 200 },
-                };
-                const newElements = [...elements, newEl];
-                setElements(newElements);
-                addToHistory(newElements);
-              }}
-            >
-              <Square className="w-4 h-4 mr-2" />
-              Adicionar Seção
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? "Publicando..." : "Publicar Site"}
             </Button>
           </div>
+        </div>
 
-          {selectedEl && (
-            <div className="mt-6 pt-6 border-t">
-              <h3 className="font-semibold mb-4">Propriedades</h3>
-              <Tabs defaultValue="content">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="content">Conteúdo</TabsTrigger>
-                  <TabsTrigger value="style">Estilo</TabsTrigger>
-                </TabsList>
-                <TabsContent value="content" className="space-y-4">
-                  {selectedEl.type === "text" && (
-                    <div className="space-y-2">
+        {/* Canvas */}
+        <ScrollArea className="flex-1 p-6">
+          <div className="max-w-7xl mx-auto">
+            <Card className="min-h-[1000px] relative bg-background shadow-xl overflow-hidden">
+              {elements.map((el) => (
+                <div
+                  key={el.id}
+                  className={`absolute cursor-move group ${
+                    selectedElement === el.id ? "ring-2 ring-primary z-50" : ""
+                  }`}
+                  style={{ left: el.position.x, top: el.position.y }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectElement(el.id);
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, el.id)}
+                >
+                  {el.type === "text" && (
+                    <div style={el.styles as React.CSSProperties} className="select-none">
+                      {el.content}
+                    </div>
+                  )}
+                  {el.type === "button" && (
+                    <button
+                      style={el.styles as React.CSSProperties}
+                      className="transition-all hover:scale-105 select-none"
+                    >
+                      {el.content}
+                    </button>
+                  )}
+                  {el.type === "image" && (
+                    <img
+                      src={el.content}
+                      alt=""
+                      style={el.styles as React.CSSProperties}
+                      className="block select-none"
+                      draggable={false}
+                    />
+                  )}
+                  {el.type === "section" && (
+                    <div style={el.styles as React.CSSProperties} className="rounded-lg select-none" />
+                  )}
+                  
+                  {selectedElement === el.id && (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-3 -right-3 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteElement(el.id);
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </Card>
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Right Sidebar - Properties */}
+      <ScrollArea className="w-80 bg-card border-l">
+        <div className="p-4 space-y-4">
+          {selectedElement && (() => {
+            const element = elements.find((el) => el.id === selectedElement);
+            if (!element) return null;
+
+            return (
+              <>
+                <div>
+                  <h3 className="font-semibold mb-1">Propriedades</h3>
+                  <p className="text-sm text-muted-foreground capitalize">{element.type}</p>
+                </div>
+                
+                <Separator />
+                
+                {element.type === "text" && (
+                  <div>
+                    <Label>Conteúdo</Label>
+                    <Input
+                      value={element.content}
+                      onChange={(e) => handleUpdateElement(selectedElement, "content", e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {element.type === "image" && (
+                  <div>
+                    <Label>URL da Imagem</Label>
+                    <Input
+                      value={element.content}
+                      onChange={(e) => handleUpdateElement(selectedElement, "content", e.target.value)}
+                      placeholder="https://..."
+                    />
+                  </div>
+                )}
+
+                {element.type === "button" && (
+                  <>
+                    <div>
                       <Label>Texto</Label>
-                      <Textarea
-                        value={selectedEl.content}
-                        onChange={(e) =>
-                          updateElement(selectedEl.id, { content: e.target.value })
-                        }
+                      <Input
+                        value={element.content}
+                        onChange={(e) => handleUpdateElement(selectedElement, "content", e.target.value)}
                       />
                     </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="style" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Cor do Texto</Label>
-                    <Input
-                      type="color"
-                      value={selectedEl.styles.color || "#000000"}
-                      onChange={(e) =>
-                        updateElement(selectedEl.id, {
-                          styles: { ...selectedEl.styles, color: e.target.value },
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cor de Fundo</Label>
-                    <Input
-                      type="color"
-                      value={selectedEl.styles.backgroundColor || "#ffffff"}
-                      onChange={(e) =>
-                        updateElement(selectedEl.id, {
-                          styles: { ...selectedEl.styles, backgroundColor: e.target.value },
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tamanho da Fonte</Label>
-                    <Input
-                      type="number"
-                      value={parseInt(selectedEl.styles.fontSize || "16")}
-                      onChange={(e) =>
-                        updateElement(selectedEl.id, {
-                          styles: { ...selectedEl.styles, fontSize: `${e.target.value}px` },
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Largura (px)</Label>
+                    <div>
+                      <Label>Link</Label>
                       <Input
-                        type="number"
-                        value={parseInt(selectedEl.styles.width || "0") || 0}
-                        onChange={(e) =>
-                          updateElement(selectedEl.id, {
-                            styles: { ...selectedEl.styles, width: `${e.target.value}px` },
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Altura (px)</Label>
-                      <Input
-                        type="number"
-                        value={parseInt(selectedEl.styles.height || "0") || 0}
-                        onChange={(e) =>
-                          updateElement(selectedEl.id, {
-                            styles: { ...selectedEl.styles, height: `${e.target.value}px` },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  {selectedEl.type === "button" && (
-                    <div className="space-y-2">
-                      <Label>Link (URL)</Label>
-                      <Input
-                        type="url"
-                        value={selectedEl.link || ""}
-                        onChange={(e) =>
-                          updateElement(selectedEl.id, { link: e.target.value })
-                        }
+                        value={element.link || ""}
+                        onChange={(e) => handleUpdateElement(selectedElement, "link", e.target.value)}
                         placeholder="https://..."
                       />
                     </div>
-                  )}
-                  {selectedEl.type === "image" && (
-                    <div className="space-y-2">
-                      <Label>URL da Imagem</Label>
+                  </>
+                )}
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm">Estilo</h4>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Largura</Label>
                       <Input
-                        type="url"
-                        value={selectedEl.content}
-                        onChange={(e) =>
-                          updateElement(selectedEl.id, { content: e.target.value })
-                        }
-                        placeholder="https://..."
+                        value={element.styles.width || "auto"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "width", e.target.value)}
+                        placeholder="auto"
+                        className="h-8"
                       />
                     </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                    <div>
+                      <Label className="text-xs">Altura</Label>
+                      <Input
+                        value={element.styles.height || "auto"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "height", e.target.value)}
+                        placeholder="auto"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Tamanho da Fonte</Label>
+                    <Input
+                      value={element.styles.fontSize || "16px"}
+                      onChange={(e) => handleUpdateStyle(selectedElement, "fontSize", e.target.value)}
+                      placeholder="16px"
+                      className="h-8"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Peso da Fonte</Label>
+                    <select
+                      value={element.styles.fontWeight || "400"}
+                      onChange={(e) => handleUpdateStyle(selectedElement, "fontWeight", e.target.value)}
+                      className="w-full h-8 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="300">Light</option>
+                      <option value="400">Normal</option>
+                      <option value="500">Medium</option>
+                      <option value="600">Semibold</option>
+                      <option value="700">Bold</option>
+                      <option value="800">Extra Bold</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Alinhamento</Label>
+                    <select
+                      value={element.styles.textAlign || "left"}
+                      onChange={(e) => handleUpdateStyle(selectedElement, "textAlign", e.target.value)}
+                      className="w-full h-8 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="left">Esquerda</option>
+                      <option value="center">Centro</option>
+                      <option value="right">Direita</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Cor do Texto</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={element.styles.color || "#000000"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "color", e.target.value)}
+                        className="h-8 w-16"
+                      />
+                      <Input
+                        value={element.styles.color || "#000000"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "color", e.target.value)}
+                        className="h-8 flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Cor de Fundo</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={element.styles.backgroundColor || "#ffffff"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "backgroundColor", e.target.value)}
+                        className="h-8 w-16"
+                      />
+                      <Input
+                        value={element.styles.backgroundColor || "#ffffff"}
+                        onChange={(e) => handleUpdateStyle(selectedElement, "backgroundColor", e.target.value)}
+                        className="h-8 flex-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Padding</Label>
+                    <Input
+                      value={element.styles.padding || "0px"}
+                      onChange={(e) => handleUpdateStyle(selectedElement, "padding", e.target.value)}
+                      placeholder="10px"
+                      className="h-8"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Border Radius</Label>
+                    <Input
+                      value={element.styles.borderRadius || "0px"}
+                      onChange={(e) => handleUpdateStyle(selectedElement, "borderRadius", e.target.value)}
+                      placeholder="8px"
+                      className="h-8"
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleDeleteElement(selectedElement)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Deletar Elemento
+                </Button>
+              </>
+            );
+          })()}
+
+          {!selectedElement && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Layers className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p className="text-sm">Selecione um elemento para editar</p>
             </div>
           )}
         </div>
-
-        {/* Canvas - Editor Area */}
-        <div className="flex-1 bg-muted/30 overflow-auto p-8">
-          <div className="max-w-6xl mx-auto bg-background rounded-lg shadow-lg min-h-[800px] relative">
-            {elements.map((element) => (
-              <div
-                key={element.id}
-                className={`absolute cursor-move transition-all ${
-                  selectedElement === element.id ? "ring-2 ring-primary" : ""
-                }`}
-                style={{
-                  left: element.position.x,
-                  top: element.position.y,
-                  ...element.styles,
-                }}
-                onClick={() => setSelectedElement(element.id)}
-                onMouseDown={(e) => handleMouseDown(e, element)}
-              >
-                {element.type === "text" && (
-                  <div contentEditable suppressContentEditableWarning>
-                    {element.content}
-                  </div>
-                )}
-                {element.type === "button" && (
-                  <a
-                    href={element.link || "#"}
-                    target={element.link ? "_blank" : undefined}
-                    rel={element.link ? "noopener noreferrer" : undefined}
-                    className="inline-block"
-                  >
-                    {element.content}
-                  </a>
-                )}
-                {element.type === "image" && (
-                  <img src={element.content} alt="" className="block" />
-                )}
-                {element.type === "section" && <div className="w-full h-full" />}
-
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 };
